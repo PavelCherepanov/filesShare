@@ -6,25 +6,26 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Enumeration;
 
 public class Server {
 
     // Список массивов для хранения информации о полученных файлах
     static ArrayList<MyFile> myFiles = new ArrayList<>();
     public static String[] dir;
-    public static ArrayList<MyFile> dirOld = new ArrayList<>();
 
     public static boolean isDir;
 
     public static void main(String[] args) throws IOException {
 
         int fileId = 0;
+
+
 
         JFrame jFrame = new JFrame("Server");
         jFrame.setSize(500, 500);
@@ -53,6 +54,7 @@ public class Server {
 
         // Создаем серверный сокет, который сервер будет слушать
         ServerSocket serverSocket = new ServerSocket(1234);
+        System.out.println(serverSocket.getInetAddress());
 
         // Узнаем список файлов в папке Downloads на севере
         File f = new File("Downloads\\");
@@ -82,7 +84,7 @@ public class Server {
                 // Stream для получения данных от клиента через сокет
                 DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
 
-
+                System.out.println(socket.getInetAddress());;
                 // Считаем размер имени файла, чтобы знать, когда прекратить чтение.
                 int fileNameLength = dataInputStream.readInt();
                 // Если файл существует
@@ -267,11 +269,13 @@ public class Server {
                 //Если пользователь нажал на существующий файл
                 if (isDir == true){
                     try {
+                        JFrame jmFrame = new JFrame();
+                        String getIp = JOptionPane.showInputDialog(jmFrame, "Server ip "+ getMyIp() +  + "Enter ip for client", "192.168.0");
                         File fileToDownload = new File("Downloads\\" + fileName);
                         // Создаем входной поток в файл, который хотим отправить
                         FileInputStream fileInputStream = new FileInputStream(fileToDownload.getAbsolutePath());
                         // Создаем сокетное соединение для соединения с сервером
-                        Socket socket = new Socket("localhost", 1235);
+                        Socket socket = new Socket(getIp, 1235);
                         // Создаем выходной поток для записи на сервер через соединение сокета
                         DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
                         // Получаем имя файла, которое мы хотите отправить и сохраняем его
@@ -334,5 +338,33 @@ public class Server {
         jFrame.add(jPanel);
 
         return jFrame;
+    }
+
+    public static String getMyIp(){
+        try {
+            Enumeration<NetworkInterface> nifs = NetworkInterface.getNetworkInterfaces();
+            while (nifs.hasMoreElements()) {
+                NetworkInterface nif = nifs.nextElement();
+
+                if (nif.getName().startsWith("wlan")) {
+                    Enumeration<InetAddress> addresses = nif.getInetAddresses();
+
+                    while (addresses.hasMoreElements()) {
+
+                        InetAddress addr = addresses.nextElement();
+                        if (addr.getAddress().length == 4) {
+                            String ip = addr.getHostAddress();
+                            System.out.println(ip);
+                            return ip;
+                        }
+                    }
+                }
+            }
+
+        } catch (SocketException ex) {
+            ex.printStackTrace(System.err);
+        }
+
+        return null;
     }
 }
