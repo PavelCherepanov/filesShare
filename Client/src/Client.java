@@ -11,24 +11,10 @@ public class Client {
 
     public static void main(String[] args) throws IOException {
 
-        /*Enumeration e = NetworkInterface.getNetworkInterfaces();
-        while(e.hasMoreElements())
-        {
-            NetworkInterface n = (NetworkInterface) e.nextElement();
-            Enumeration ee = n.getInetAddresses();
-            while (ee.hasMoreElements())
-            {
-                InetAddress i = (InetAddress) ee.nextElement();
-                System.out.println(i.getHostAddress());
-            }
-        }*/
-
-
-
         final File[] fileToSend = new File[1];
 
         JFrame jmFrame = new JFrame();
-        String getIp = JOptionPane.showInputDialog(jmFrame, "Client ip " + getMyIp() + "." + " Enter ip for server ", "192.168.0");
+        String getIp = JOptionPane.showInputDialog(jmFrame, "Client ip " + getMyIp() + "." + " Enter ip for server ", "192.168.0.139");
 
         JFrame jFrame = new JFrame("Client");
         jFrame.setSize(450, 450);
@@ -93,7 +79,7 @@ public class Client {
                         FileInputStream fileInputStream = new FileInputStream(fileToSend[0].getAbsolutePath());
 
                         // Создайте сокетное соединение для соединения с сервером.
-                        Socket socket = new Socket(getIp, 1234);
+                        Socket socket = new Socket(getIp, 12345);
                         // Создаем сокетный поток
                         DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
                         // Получаем имя файла, который вы хотите отправить
@@ -124,34 +110,36 @@ public class Client {
         jFrame.add(jpButton);
 
         jFrame.setVisible(true);
-
         ServerSocket serverSocket = new ServerSocket(1235);
-        Socket socket = serverSocket.accept();
-        DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
-        // Прочтите размер имени файла, чтобы знать, когда прекратить чтение.
-        int fileNameLength = dataInputStream.readInt();
-        // Если файл существует
-        if (fileNameLength > 0) {
-            // Байтовый массив для хранения имени файла.
-            byte[] fileNameBytes = new byte[fileNameLength];
-            // Чтение из входного потока в массив байтов.
-            dataInputStream.readFully(fileNameBytes, 0, fileNameBytes.length);
-            // Создайте имя файла из массива байтов.
-            String fileName = new String(fileNameBytes);
-            File fileToDownload = new File("Client\\Downloads\\" + fileName);
-            // Создайте поток для записи данных в файл.
-            FileOutputStream fileOutputStream = new FileOutputStream(fileToDownload.getAbsolutePath());
-            byte[] buffer = new byte[(int)fileToDownload.length()];
-            fileOutputStream.write(buffer);
+        while (true){
 
-            int fileContentLength = dataInputStream.readInt();
+            Socket socket = serverSocket.accept();
+            DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
+            // Прочтите размер имени файла, чтобы знать, когда прекратить чтение.
+            int fileNameLength = dataInputStream.readInt();
+            // Если файл существует
+            if (fileNameLength > 0) {
+                // Байтовый массив для хранения имени файла.
+                byte[] fileNameBytes = new byte[fileNameLength];
+                // Чтение из входного потока в массив байтов.
+                dataInputStream.readFully(fileNameBytes, 0, fileNameBytes.length);
+                // Создайте имя файла из массива байтов.
+                String fileName = new String(fileNameBytes);
+                File fileToDownload = new File("Client\\Downloads\\" + fileName);
+                // Создайте поток для записи данных в файл.
+                FileOutputStream fileOutputStream = new FileOutputStream(fileToDownload.getAbsolutePath());
+                byte[] buffer = new byte[(int) fileToDownload.length()];
+                fileOutputStream.write(buffer);
 
-            // Массив для хранения данных файла
-            byte[] fileContentBytes = new byte[fileContentLength];
-            // Чтение из входного потока в массив fileContentBytes
-            dataInputStream.readFully(fileContentBytes, 0, fileContentBytes.length);
-            fileOutputStream.write(fileContentBytes);
-            fileOutputStream.close();
+                int fileContentLength = dataInputStream.readInt();
+
+                // Массив для хранения данных файла
+                byte[] fileContentBytes = new byte[fileContentLength];
+                // Чтение из входного потока в массив fileContentBytes
+                dataInputStream.readFully(fileContentBytes, 0, fileContentBytes.length);
+                fileOutputStream.write(fileContentBytes);
+                fileOutputStream.close();
+            }
         }
     }
 

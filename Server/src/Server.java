@@ -11,20 +11,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 
 public class Server {
 
     // Список массивов для хранения информации о полученных файлах
     static ArrayList<MyFile> myFiles = new ArrayList<>();
-    public static String[] dir;
+    // Узнаем список файлов в папке Downloads на севере
+    public static File f = new File("Downloads\\");
+    public static ArrayList<String> Dir = new ArrayList<String>(Arrays.asList(f.list()));
+
 
     public static boolean isDir;
 
     public static void main(String[] args) throws IOException {
 
         int fileId = 0;
-
 
 
         JFrame jFrame = new JFrame("Server");
@@ -53,14 +56,15 @@ public class Server {
         jFrame.setVisible(true);
 
         // Создаем серверный сокет, который сервер будет слушать
-        ServerSocket serverSocket = new ServerSocket(1234);
+        ServerSocket serverSocket = new ServerSocket(12345);
         System.out.println(serverSocket.getInetAddress());
 
-        // Узнаем список файлов в папке Downloads на севере
-        File f = new File("Downloads\\");
-        dir = f.list();
-        // Показываем это список файлов
-        for (String name: dir) {
+
+        // Показываем этот список файлов
+        for (String name: Dir) {
+            if (Dir.size() != 0){
+                isDir = true;
+            }
             JPanel jpFileOldRow = new JPanel();
             jpFileOldRow.setLayout(new BoxLayout(jpFileOldRow, BoxLayout.X_AXIS));
             // Задаем имя файла
@@ -132,6 +136,7 @@ public class Server {
 
                         // Добавляем новый файл в список
                         myFiles.add(new MyFile(fileId, fileName, fileContentBytes, getFileExtension(fileName)));
+                        Dir.add(fileName);
                         // Увеличиваем fileId для следующего файла
                         fileId++;
                     }
@@ -171,31 +176,40 @@ public class Server {
                 JPanel jPanel = (JPanel) e.getSource();
                 // Получаем идентификатор файла
                 int fileId = Integer.parseInt(jPanel.getName());
-
+                System.out.println(fileId >= Dir.size()-1);
+                System.out.println(fileId);
+                System.out.println(Dir.size());
                 // Узнаем какой файл выбран
-                if (dir.length != 0){
+                if (fileId >= Dir.size()-1) {
 
-                for (int i = 0; i < dir.length; i++){
-                    if (i == fileId){
-                        isDir = true;
-                        Path p1 = Paths.get("Downloads\\" + dir[i]);
-                        JFrame jfPreview = null;
-                        try {
-                            jfPreview = createFrame(dir[i], Files.readAllBytes(p1), getFileExtension(dir[i]));
+                    for (MyFile myFile : myFiles) {
+                        if (myFile.getId() == fileId) {
+                            JFrame jfPreview = createFrame2(myFile.getName(), myFile.getData(), myFile.getFileExtension());
                             jfPreview.setVisible(true);
-                        } catch (IOException ex) {
-                            ex.printStackTrace();
+
+                        }
+
+                    }
+
+
+                }else{
+                    for (int i = 0; i < Dir.size(); i++) {
+                        if (i == fileId) {
+
+                            Path p1 = Paths.get("Downloads\\" + Dir.get(i));
+                            JFrame jfPreview = null;
+                            try {
+                                jfPreview = createFrame(Dir.get(i), Files.readAllBytes(p1), getFileExtension(Dir.get(i)));
+                                jfPreview.setVisible(true);
+
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
+                            }
                         }
                     }
-                }
+
                 }
 
-                for (MyFile myFile : myFiles) {
-                    if (myFile.getId() == fileId) {
-                        JFrame jfPreview = createFrame(myFile.getName(), myFile.getData(), myFile.getFileExtension());
-                        jfPreview.setVisible(true);
-                    }
-                }
             }
 
 
@@ -266,54 +280,41 @@ public class Server {
         jbYes.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //Если пользователь нажал на существующий файл
-                if (isDir == true){
-                    try {
-                        JFrame jmFrame = new JFrame();
-                        String getIp = JOptionPane.showInputDialog(jmFrame, "Server ip "+ getMyIp() +  + "Enter ip for client", "192.168.0");
-                        File fileToDownload = new File("Downloads\\" + fileName);
-                        // Создаем входной поток в файл, который хотим отправить
-                        FileInputStream fileInputStream = new FileInputStream(fileToDownload.getAbsolutePath());
-                        // Создаем сокетное соединение для соединения с сервером
-                        Socket socket = new Socket(getIp, 1235);
-                        // Создаем выходной поток для записи на сервер через соединение сокета
-                        DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-                        // Получаем имя файла, которое мы хотите отправить и сохраняем его
-                        String fileName = fileToDownload.getName();
-                        // Преобразуйте имя файла в массив байтов для отправки на сервер
-                        byte[] fileNameBytes = fileName.getBytes();
-                        // Создаем байтовый массив размером с файл
-                        byte[] fileBytes = new byte[(int)fileToDownload.length()];
-                        // Помещаем содержимое файла в массив байтов для отправки, чтобы эти байты можно было отправить на сервер.
-                        fileInputStream.read(fileBytes);
-                        // Отправляем длину имени файла, чтобы сервер знал, когда прекратить чтение
-                        dataOutputStream.writeInt(fileNameBytes.length);
-                        // Отправляем имя файла
-                        dataOutputStream.write(fileNameBytes);
-                        // Отправляем длину массива байтов, чтобы сервер знал, когда прекратить чтение
-                        dataOutputStream.writeInt(fileBytes.length);
-                        // Отправляем файл
-                        dataOutputStream.write(fileBytes);
-                        jFrame.dispose();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-                    try {
+                    //Если пользователь нажал на существующий файл
 
-                        File fileToDownload = new File("Downloads\\" + fileName);
-
-                        // Создаем поток для записи данных в файл.
-                        FileOutputStream fileOutputStream = new FileOutputStream(fileToDownload);
-                        // Записываем данные файла в файл
-                        fileOutputStream.write(fileData);
-                        // Закрываем поток
-                        fileOutputStream.close();
-                        // Закрываем окно
-                        jFrame.dispose();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
+                        try {
+                            System.out.println("Уже есть");
+                            JFrame jmFrame = new JFrame();
+                            String getIp = JOptionPane.showInputDialog(jmFrame, "Server ip " + getMyIp() + "Enter ip for client", "localhost");
+                            File fileToDownload = new File("Downloads\\" + fileName);
+                            // Создаем входной поток в файл, который хотим отправить
+                            FileInputStream fileInputStream = new FileInputStream(fileToDownload.getAbsolutePath());
+                            // Создаем сокетное соединение для соединения с сервером
+                            Socket socket = new Socket(getIp, 1235);
+                            System.out.println(socket.getInetAddress());
+                            // Создаем выходной поток для записи на сервер через соединение сокета
+                            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+                            // Получаем имя файла, которое мы хотите отправить и сохраняем его
+                            String fileName = fileToDownload.getName();
+                            // Преобразуйте имя файла в массив байтов для отправки на сервер
+                            byte[] fileNameBytes = fileName.getBytes();
+                            // Создаем байтовый массив размером с файл
+                            byte[] fileBytes = new byte[(int) fileToDownload.length()];
+                            // Помещаем содержимое файла в массив байтов для отправки, чтобы эти байты можно было отправить на сервер.
+                            fileInputStream.read(fileBytes);
+                            // Отправляем длину имени файла, чтобы сервер знал, когда прекратить чтение
+                            dataOutputStream.writeInt(fileNameBytes.length);
+                            // Отправляем имя файла
+                            dataOutputStream.write(fileNameBytes);
+                            // Отправляем длину массива байтов, чтобы сервер знал, когда прекратить чтение
+                            dataOutputStream.writeInt(fileBytes.length);
+                            // Отправляем файл
+                            dataOutputStream.write(fileBytes);
+                            jFrame.dispose();
+                            /*socket.close();*/
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
 
 
 
@@ -339,6 +340,99 @@ public class Server {
 
         return jFrame;
     }
+
+    public static JFrame createFrame2(String fileName, byte[] fileData, String fileExtension) {
+
+        JFrame jFrame = new JFrame("File Downloader");
+        jFrame.setSize(400, 400);
+
+        JPanel jPanel = new JPanel();
+        jPanel.setLayout(new BoxLayout(jPanel, BoxLayout.Y_AXIS));
+
+        JLabel jlTitle = new JLabel("Server");
+        jlTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        jlTitle.setFont(new Font("Arial", Font.BOLD, 25));
+        jlTitle.setBorder(new EmptyBorder(20,0,10,0));
+
+        JLabel jlPrompt = new JLabel("Вы уверены, что хотите сохранить " + fileName + "?");
+        jlPrompt.setFont(new Font("Arial", Font.BOLD, 20));
+        jlPrompt.setBorder(new EmptyBorder(20,0,10,0));
+        jlPrompt.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Кнопка да
+        JButton jbYes = new JButton("Да");
+        jbYes.setPreferredSize(new Dimension(150, 75));
+        jbYes.setFont(new Font("Arial", Font.BOLD, 20));
+        // Кнопка нет
+        JButton jbNo = new JButton("Нет");
+        jbNo.setPreferredSize(new Dimension(150, 75));
+        jbNo.setFont(new Font("Arial", Font.BOLD, 20));
+
+        // Панель для кнопок
+        JLabel jlFileContent = new JLabel();
+        jlFileContent.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel jpButtons = new JPanel();
+        jpButtons.setBorder(new EmptyBorder(20, 0, 10, 0));
+
+        jpButtons.add(jbYes);
+        jpButtons.add(jbNo);
+
+        // Если файл текстовый, отображаем текст
+        if (fileExtension.equalsIgnoreCase("txt")) {
+            jlFileContent.setText("<html>" + "<p>" + new String(fileData) + "</p>"+ "</html>");
+            //  Если файл не текстовый, сделаем его изображением
+        } else {
+            jlFileContent.setIcon(new ImageIcon(fileData));
+        }
+
+        // Скачиваем файл
+        jbYes.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //Если пользователь нажал на существующий файл
+
+                    try {
+                        System.out.println(" еще нет ");
+                        File fileToDownload = new File("Downloads\\" + fileName);
+
+                        // Создаем поток для записи данных в файл.
+                        FileOutputStream fileOutputStream = new FileOutputStream(fileToDownload);
+                        // Записываем данные файла в файл
+                        fileOutputStream.write(fileData);
+                        // Закрываем поток
+                        fileOutputStream.close();
+
+                        // Закрываем окно
+                        jFrame.dispose();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+
+
+            }
+        });
+
+        // Кнопка нет
+        jbNo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Закрываем окно
+                jFrame.dispose();
+            }
+        });
+
+        // Добавляем все элементы
+        jPanel.add(jlTitle);
+        jPanel.add(jlPrompt);
+        jPanel.add(jlFileContent);
+        jPanel.add(jpButtons);
+
+        jFrame.add(jPanel);
+
+        return jFrame;
+    }
+
 
     public static String getMyIp(){
         try {
